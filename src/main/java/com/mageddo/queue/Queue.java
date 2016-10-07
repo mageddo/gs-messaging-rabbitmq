@@ -8,5 +8,5 @@ public interface Queue {
 	String getName();
 	String getExchange();
 	String getRoutingKey();
-
+	int getTTL();
 }

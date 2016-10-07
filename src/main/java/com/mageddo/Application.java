@@ -62,7 +62,7 @@ public class Application {
         if(!dlq){
             // when all queue retry fails move to this exchange
             arguments.put("x-dead-letter-exchange", completeQueue.getDLQ().getExchange());
-            arguments.put("x-message-ttl", 50000); // time to wait for move to DLQ
+            arguments.put("x-message-ttl", queue.getTTL()); // time to wait for move to DLQ
         }
 
         final Queue rabbitQueue = new Queue(queue.getName(), true, false, false, arguments);

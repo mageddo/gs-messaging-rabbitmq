@@ -33,7 +33,7 @@ public class PingReceiver {
   @RabbitListener(queues = QueueNames.PING)
   public void handleMessage(Date date) {
 
-    if(new Random().nextInt(20) == 10){
+    if(new Random().nextInt(50) == 10){
 //    if(1==2){
       LOGGER.info("Received incoming object at " + date);
     }else {

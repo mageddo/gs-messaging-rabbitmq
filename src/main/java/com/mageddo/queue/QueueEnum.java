@@ -7,18 +7,19 @@ import static com.mageddo.queue.QueueNames.PING;
  */
 public enum QueueEnum implements CompleteQueue {
 
-	PING_QUEUE(PING)
-	;
+	PING_QUEUE(PING, 5000);
 
 	private final String name;
 	private final String exchange;
 	private final String routingKey;
 	private final DLQueue dlq;
+	private final int retryTimeout;
 
-	QueueEnum(String name) {
+	QueueEnum(String name, int retryTimeout) {
 		this.name = name;
 		this.exchange = this.name + "Exchange";
 		this.routingKey = this.name + "RoutingKey";
+		this.retryTimeout = retryTimeout;
 		this.dlq = new SimpleDLQueue(this.name);
 	}
 
@@ -40,6 +41,11 @@ public enum QueueEnum implements CompleteQueue {
 	@Override
 	public String getRoutingKey() {
 		return this.routingKey;
+	}
+
+	@Override
+	public int getTTL() {
+		return this.retryTimeout;
 	}
 
 	static class SimpleDLQueue implements DLQueue {
@@ -67,6 +73,11 @@ public enum QueueEnum implements CompleteQueue {
 		@Override
 		public String getRoutingKey() {
 			return this.routingKey;
+		}
+
+		@Override
+		public int getTTL() {
+			return 0;
 		}
 	}
 }
