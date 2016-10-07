@@ -7,6 +7,9 @@ import java.util.Map;
 
 import com.mageddo.queue.CompleteQueue;
 import com.mageddo.queue.QueueEnum;
+import com.mageddo.utils.QueueUtils;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.amqp.core.Binding;
 import org.springframework.amqp.core.BindingBuilder;
 import org.springframework.amqp.core.DirectExchange;
@@ -26,6 +29,8 @@ import org.springframework.scheduling.annotation.EnableScheduling;
 @Configuration
 public class Application {
 
+    private static final Logger LOGGER = LoggerFactory.getLogger(Application.class);
+
     @Autowired
     ConfigurableBeanFactory beanFactory;
 
@@ -35,7 +40,6 @@ public class Application {
     @PostConstruct
     void setupQueue() {
 
-//        final List<Queue> queues = new ArrayList<>();
         for(final CompleteQueue completeQueue: QueueEnum.values()){
 
             declareQueue(completeQueue, completeQueue, false);
@@ -45,18 +49,35 @@ public class Application {
 
     }
 
-    void declareQueue(CompleteQueue completeQueue, com.mageddo.queue.Queue queue, boolean dlq){
+
+	/**
+	 * Creates the queue
+   * @param completeQueue
+   * @param queue
+   * @param dlq
+   */
+  void declareQueue(CompleteQueue completeQueue, com.mageddo.queue.Queue queue, boolean dlq){
 
         final Map<String, Object> arguments = new HashMap<>();
-        if(dlq){
-        }else{
+        if(!dlq){
+            // when all queue retry fails move to this exchange
             arguments.put("x-dead-letter-exchange", completeQueue.getDLQ().getExchange());
-            arguments.put("x-message-ttl", 5000);
+            arguments.put("x-message-ttl", 50000); // time to wait for move to DLQ
         }
 
         final Queue rabbitQueue = new Queue(queue.getName(), true, false, false, arguments);
         final DirectExchange exchange = new DirectExchange(queue.getExchange());
         final Binding binding = BindingBuilder.bind(rabbitQueue).to(exchange).with("");
+
+        if(QueueUtils.queueExists(rabbitAdmin, rabbitQueue.getName())){
+            if(QueueUtils.getQueueSize(rabbitAdmin, rabbitQueue.getName()) > 0){
+                LOGGER.error("msg=queue already exists and is not empty");
+                // MOVER para uma fila temporaria e depois trazer devolta
+                return ;
+            }else{
+                rabbitAdmin.deleteQueue(rabbitQueue.getName());
+            }
+        }
 
         rabbitAdmin.declareQueue(rabbitQueue);
         rabbitAdmin.declareExchange(exchange);

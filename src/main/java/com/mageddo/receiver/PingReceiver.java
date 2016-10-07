@@ -1,6 +1,7 @@
 package com.mageddo.receiver;
 
 import java.util.Date;
+import java.util.Random;
 
 import com.mageddo.queue.QueueEnum;
 import com.mageddo.queue.QueueNames;
@@ -21,7 +22,7 @@ public class PingReceiver {
   private RabbitTemplate outgoingSender;
 
   // Scheduled task to send an object every 5 seconds
-  @Scheduled(fixedDelay = 2000)
+  @Scheduled(fixedDelay = 500)
   public void sender() {
     Date d = new Date();
     LOGGER.info("Sending example object at " + d);
@@ -32,8 +33,8 @@ public class PingReceiver {
   @RabbitListener(queues = QueueNames.PING)
   public void handleMessage(Date date) {
 
-//    if(new Random().nextBoolean()){
-    if(1==2){
+    if(new Random().nextInt(20) == 10){
+//    if(1==2){
       LOGGER.info("Received incoming object at " + date);
     }else {
       LOGGER.error("error at consuming");
