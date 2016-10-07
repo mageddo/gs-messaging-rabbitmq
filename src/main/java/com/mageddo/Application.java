@@ -2,20 +2,22 @@
 package com.mageddo;
 
 import javax.annotation.PostConstruct;
-
 import java.util.HashMap;
 import java.util.Map;
 
 import com.mageddo.queue.CompleteQueue;
 import com.mageddo.queue.QueueEnum;
+import org.springframework.amqp.core.Binding;
 import org.springframework.amqp.core.BindingBuilder;
 import org.springframework.amqp.core.DirectExchange;
 import org.springframework.amqp.core.Queue;
-import org.springframework.amqp.core.TopicExchange;
+import org.springframework.amqp.rabbit.connection.ConnectionFactory;
+import org.springframework.amqp.rabbit.core.RabbitAdmin;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.config.ConfigurableBeanFactory;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
+import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.scheduling.annotation.EnableScheduling;
 
@@ -27,36 +29,47 @@ public class Application {
     @Autowired
     ConfigurableBeanFactory beanFactory;
 
+    @Autowired
+    RabbitAdmin rabbitAdmin;
+
     @PostConstruct
     void setupQueue() {
 
 //        final List<Queue> queues = new ArrayList<>();
         for(final CompleteQueue completeQueue: QueueEnum.values()){
 
-            {
-                final Queue queueDLQ = new Queue(completeQueue.getDLQ().getName(), true);
-                final DirectExchange exchangeDLQ = new DirectExchange(completeQueue.getDLQ().getExchange());
-
-                beanFactory.registerSingleton(queueDLQ.getName(), queueDLQ);
-                beanFactory.registerSingleton(completeQueue.getDLQ().getExchange(), exchangeDLQ);
-                beanFactory.registerSingleton(completeQueue.getDLQ().getRoutingKey(),
-                    BindingBuilder.bind(queueDLQ).to(exchangeDLQ).with(queueDLQ.getName()));
-            }
-
-            {
-                Map<String, Object> arguments = new HashMap<>();
-                arguments.put("x-dead-letter-exchange", completeQueue.getDLQ().getExchange());
-                final Queue queue = new Queue(completeQueue.getName(), true, false, false, arguments);
-                final DirectExchange exchange = new DirectExchange(completeQueue.getExchange());
-
-                beanFactory.registerSingleton(completeQueue.getName(), completeQueue);
-                beanFactory.registerSingleton(completeQueue.getExchange(), exchange);
-                beanFactory.registerSingleton(completeQueue.getRoutingKey(),
-                    BindingBuilder.bind(queue).to(exchange).with(completeQueue.getName()));
-            }
+            declareQueue(completeQueue, completeQueue, false);
+            declareQueue(completeQueue, completeQueue.getDLQ(), true);
 
         }
 
+    }
+
+    void declareQueue(CompleteQueue completeQueue, com.mageddo.queue.Queue queue, boolean dlq){
+
+        final Map<String, Object> arguments = new HashMap<>();
+        if(dlq){
+        }else{
+            arguments.put("x-dead-letter-exchange", completeQueue.getDLQ().getExchange());
+            arguments.put("x-message-ttl", 5000);
+        }
+
+        final Queue rabbitQueue = new Queue(queue.getName(), true, false, false, arguments);
+        final DirectExchange exchange = new DirectExchange(queue.getExchange());
+        final Binding binding = BindingBuilder.bind(rabbitQueue).to(exchange).with("");
+
+        rabbitAdmin.declareQueue(rabbitQueue);
+        rabbitAdmin.declareExchange(exchange);
+        rabbitAdmin.declareBinding(binding);
+
+        beanFactory.registerSingleton(rabbitQueue.getName(), rabbitQueue);
+        beanFactory.registerSingleton(queue.getExchange(), exchange);
+        beanFactory.registerSingleton(queue.getRoutingKey(), binding);
+    }
+
+    @Bean
+    RabbitAdmin getRabbitAdmin(ConnectionFactory connectionFactory){
+        return new RabbitAdmin(connectionFactory);
     }
 
 //    @Bean

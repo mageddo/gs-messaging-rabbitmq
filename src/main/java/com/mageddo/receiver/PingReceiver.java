@@ -1,8 +1,8 @@
 package com.mageddo.receiver;
 
 import java.util.Date;
-import java.util.Random;
 
+import com.mageddo.queue.QueueEnum;
 import com.mageddo.queue.QueueNames;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -25,14 +25,15 @@ public class PingReceiver {
   public void sender() {
     Date d = new Date();
     LOGGER.info("Sending example object at " + d);
-    outgoingSender.convertAndSend(d);
+    outgoingSender.convertAndSend(QueueEnum.PING_QUEUE.getExchange(), "", d);
   }
 
   // Annotation to listen for an ExampleObject
   @RabbitListener(queues = QueueNames.PING)
   public void handleMessage(Date date) {
 
-    if(new Random().nextBoolean()){
+//    if(new Random().nextBoolean()){
+    if(1==2){
       LOGGER.info("Received incoming object at " + date);
     }else {
       LOGGER.error("error at consuming");
