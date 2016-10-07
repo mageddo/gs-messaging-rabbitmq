@@ -18,6 +18,7 @@ package hello;
 
 import java.util.concurrent.TimeUnit;
 
+import com.mageddo.Application;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.springframework.amqp.rabbit.core.RabbitTemplate;
