@@ -31,10 +31,12 @@ public class PingReceiver {
 
   // Annotation to listen for an ExampleObject
   @RabbitListener(queues = QueueNames.PING)
-  public void handleMessage(Date date) {
+  public void handleMessage(Date date) throws InterruptedException {
 
-    if(new Random().nextInt(50) == 10){
-//    if(1==2){
+
+    Thread.sleep(new Random().nextInt( (int) (QueueEnum.PING_QUEUE.getTTL()) ));
+
+    if(new Random().nextBoolean()){
       LOGGER.info("Received incoming object at " + date);
     }else {
       LOGGER.error("error at consuming");
