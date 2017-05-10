@@ -1,72 +1,96 @@
 package com.mageddo.queue;
 
-import static com.mageddo.queue.QueueNames.PING;
+import org.springframework.amqp.core.*;
+import org.springframework.amqp.core.Queue;
+
+import java.util.HashMap;
+import java.util.Map;
 
 /**
  * Created by elvis on 07/10/16.
  */
-public enum QueueEnum implements CompleteQueue {
+public enum QueueEnum implements com.mageddo.queue.Queue {
 
-	PING_QUEUE(PING, 5000);
+	PING(new Queue(QueueNames.PING),  50000),
+	RED_COLORS(new Queue(QueueNames.RED_COLORS), new TopicExchange(QueueNames.COLORS_EX), QueueNames.RED_COLORS_KEY, 50000, 2),
 
-	private final String name;
-	private final String exchange;
-	private final String routingKey;
-	private final DLQueue dlq;
-	private final int retryTimeout;
+	;
 
-	QueueEnum(String name, int retryTimeout) {
-		this.name = name;
-		this.exchange = this.name + "Exchange";
-		this.routingKey = this.name + "RoutingKey";
-		this.retryTimeout = retryTimeout;
-		this.dlq = new SimpleDLQueue(this.name);
+	private DLQueue dlq;
+	private Queue queue;
+	private Exchange exchange;
+	private String routingKey;
+	private int ttl;
+	private int consumers;
+
+
+	QueueEnum(Queue queue, Exchange exchange, String routingKey, int ttl, int consumers) {
+		set(queue, exchange, routingKey, ttl, consumers);
 	}
 
-	@Override
-	public DLQueue getDLQ() {
-		return this.dlq;
+	private void set(Queue queue, Exchange exchange, String routingKey, int ttl, int consumers) {
+
+		this.exchange = exchange;
+		this.routingKey = routingKey;
+		this.ttl = ttl;
+		this.consumers = consumers;
+		this.dlq = new SimpleDLQueue(queue.getName());
+
+		// when all queueEnum retry fails move to this exchange
+		final Map<String, Object> arguments = new HashMap<>();
+		arguments.put("x-dead-letter-exchange", getDlq().getExchange().getName());
+		arguments.put("x-message-ttl", getTTL()); // time to wait for move to DLQ
+		this.queue = new Queue(queue.getName(), queue.isDurable(), queue.isExclusive(), queue.isAutoDelete(), arguments);
 	}
 
-	@Override
-	public String getName() {
-		return this.name;
+	QueueEnum(Queue queue, int ttl) {
+		this.dlq = new SimpleDLQueue(queue.getName());
+		set(queue, new DirectExchange(queue.getName() + "Exchange"), "", ttl, 1);
 	}
 
-	@Override
-	public String getExchange() {
-		return this.exchange;
+	public DLQueue getDlq() {
+		return dlq;
 	}
 
-	@Override
+	public Queue getQueue() {
+		return queue;
+	}
+
+	public Exchange getExchange() {
+		return exchange;
+	}
+
 	public String getRoutingKey() {
-		return this.routingKey;
+		return routingKey;
 	}
 
-	@Override
 	public int getTTL() {
-		return this.retryTimeout;
+		return ttl;
 	}
 
-	static class SimpleDLQueue implements DLQueue {
+	public int getConsumers() {
+		return consumers;
+	}
 
-		private final String name;
-		private final String exchange;
+	class SimpleDLQueue implements DLQueue {
+
+		private final Queue queue;
+		private final DirectExchange exchange;
 		private final String routingKey;
 
 		public SimpleDLQueue(String name) {
-			this.name = name + "DLQ";
-			this.exchange = this.name + "Exchange";
-			this.routingKey = this.name + "RoutingKey";
+			this.queue = new Queue(name + "DLQ");
+			this.exchange = new DirectExchange(getQueue().getName() + "Exchange");
+			this.routingKey = "";
 		}
 
 		@Override
-		public String getName() {
-			return this.name;
+		public Queue getQueue() {
+			return this.queue;
 		}
 
 		@Override
-		public String getExchange() {
+		public DirectExchange getExchange() {
 			return this.exchange;
 		}
 
@@ -79,5 +103,11 @@ public enum QueueEnum implements CompleteQueue {
 		public int getTTL() {
 			return 0;
 		}
+
+		@Override
+		public int getConsumers() {
+			return 1;
+		}
+
 	}
 }
