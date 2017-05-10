@@ -69,15 +69,14 @@ public class Application {
         final DirectExchange exchange = new DirectExchange(queue.getExchange());
         final Binding binding = BindingBuilder.bind(rabbitQueue).to(exchange).with("");
 
-        if(QueueUtils.queueExists(rabbitAdmin, rabbitQueue.getName())){
-            if(QueueUtils.getQueueSize(rabbitAdmin, rabbitQueue.getName()) > 0){
-                LOGGER.error("msg=queue already exists and is not empty");
-                // MOVER para uma fila temporaria e depois trazer devolta
-                return ;
-            }else{
-                rabbitAdmin.deleteQueue(rabbitQueue.getName());
-            }
+        if(QueueUtils.getQueueSize(rabbitAdmin, rabbitQueue.getName()) > 0){
+            LOGGER.error("msg=queue already exists and is not empty");
+            // MOVER para uma fila temporaria e depois trazer devolta
+            return ;
+        }else{
+            rabbitAdmin.deleteQueue(rabbitQueue.getName());
         }
+
 
         rabbitAdmin.declareQueue(rabbitQueue);
         rabbitAdmin.declareExchange(exchange);

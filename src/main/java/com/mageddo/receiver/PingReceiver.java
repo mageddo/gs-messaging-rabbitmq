@@ -22,7 +22,7 @@ public class PingReceiver {
   private RabbitTemplate outgoingSender;
 
   // Scheduled task to send an object every 5 seconds
-  @Scheduled(fixedDelay = 500)
+//  @Scheduled(fixedDelay = 500)
   public void sender() {
     Date d = new Date();
     LOGGER.info("Sending example object at " + d);
