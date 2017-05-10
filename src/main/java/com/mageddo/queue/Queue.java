@@ -16,4 +16,6 @@ public interface Queue {
 	int getTTL();
 
 	int getConsumers();
+
+	int getRetries();
 }

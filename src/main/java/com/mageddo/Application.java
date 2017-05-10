@@ -5,12 +5,14 @@ import com.mageddo.queue.*;
 import com.mageddo.receiver.ColorReceiver;
 import com.mageddo.receiver.PingReceiver;
 import com.mageddo.utils.QueueUtils;
+import org.aopalliance.aop.Advice;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.amqp.core.Binding;
 import org.springframework.amqp.core.BindingBuilder;
 import org.springframework.amqp.rabbit.connection.ConnectionFactory;
 import org.springframework.amqp.rabbit.core.RabbitAdmin;
+import org.springframework.amqp.rabbit.core.RabbitTemplate;
 import org.springframework.amqp.rabbit.listener.SimpleMessageListenerContainer;
 import org.springframework.amqp.rabbit.listener.adapter.MessageListenerAdapter;
 import org.springframework.amqp.support.converter.MessagingMessageConverter;
@@ -20,7 +22,10 @@ import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.context.annotation.Primary;
 import org.springframework.messaging.converter.GenericMessageConverter;
+import org.springframework.retry.interceptor.RetryInterceptorBuilder;
+import org.springframework.retry.interceptor.StatefulRetryOperationsInterceptor;
 import org.springframework.scheduling.annotation.EnableScheduling;
 
 import javax.annotation.PostConstruct;
@@ -70,22 +75,19 @@ public class Application {
 	 */
 	void declareQueue(Queue queueEnum) {
 
-		if (QueueUtils.getQueueSize(rabbitAdmin, queueEnum.getQueue().getName()) > 0) {
-			LOGGER.error("msg=queueEnum already exists and is not empty");
-			// MOVER para uma fila temporaria e depois trazer devolta
-			return;
-		} else {
-			rabbitAdmin.deleteQueue(queueEnum.getQueue().getName());
-		}
-
-		final SimpleMessageListenerContainer container = new SimpleMessageListenerContainer(connectionFactory);
-		container.setQueues(queueEnum.getQueue());
-		container.setConcurrentConsumers(queueEnum.getConsumers());
+//		if (QueueUtils.getQueueSize(rabbitAdmin, queueEnum.getQueue().getName()) > 0) {
+//			LOGGER.error("msg=queueEnum, status=already exists and is not empty, queue={}", queueEnum.getQueue().getName());
+//			// MOVER para uma fila temporaria e depois trazer devolta
+//			return;
+//		} else {
+//			rabbitAdmin.deleteQueue(queueEnum.getQueue().getName());
+//		}
 
 		final Binding binding = BindingBuilder.bind(queueEnum.getQueue())
 			.to(queueEnum.getExchange())
 			.with(queueEnum.getRoutingKey())
 			.noargs();
+
 
 		rabbitAdmin.declareQueue(queueEnum.getQueue());
 		rabbitAdmin.declareExchange(queueEnum.getExchange());
@@ -104,6 +106,21 @@ public class Application {
 				receiver = new ColorReceiver();
 			}
 
+			final SimpleMessageListenerContainer container = new SimpleMessageListenerContainer(connectionFactory);
+			container.setQueues(queueEnum.getQueue());
+			container.setConcurrentConsumers(queueEnum.getConsumers());
+
+			final StatefulRetryOperationsInterceptor statefulRetryInterceptorBuilder = RetryInterceptorBuilder
+				.stateful()
+//				.retryPolicy()
+				.maxAttempts(queueEnum.getRetries())
+				.backOffOptions(queueEnum.getTTL(), 2, queueEnum.getTTL())
+				.build();
+
+			container.setAdviceChain(new Advice[]{statefulRetryInterceptorBuilder});
+
+			container.start();
+
 			final MessageListenerAdapter listenerAdapter = new MessageListenerAdapter(receiver);
 			listenerAdapter.setDefaultListenerMethod("consume");
 			container.setMessageListener(listenerAdapter);
@@ -111,11 +128,23 @@ public class Application {
 
 		}
 
+
 	}
 
 	@Bean
-	RabbitAdmin getRabbitAdmin() {
-		return new RabbitAdmin(connectionFactory);
+	@Primary
+	public RabbitTemplate rabbitTemplate(){
+		final RabbitTemplate rabbitTemplate = new RabbitTemplate(connectionFactory);
+		rabbitTemplate.setChannelTransacted(true);
+		return rabbitTemplate;
+	}
+
+
+	@Bean
+	public RabbitAdmin getRabbitAdmin() {
+		final RabbitAdmin rabbitAdmin = new RabbitAdmin(connectionFactory);
+		rabbitAdmin.getRabbitTemplate().setChannelTransacted(true);
+		return rabbitAdmin;
 	}
 
 	public static void main(String[] args) throws InterruptedException {

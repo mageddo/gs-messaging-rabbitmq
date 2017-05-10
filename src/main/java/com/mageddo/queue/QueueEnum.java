@@ -11,8 +11,8 @@ import java.util.Map;
  */
 public enum QueueEnum implements com.mageddo.queue.Queue {
 
-	PING(new Queue(QueueNames.PING),  50000),
-	RED_COLORS(new Queue(QueueNames.RED_COLORS), new TopicExchange(QueueNames.COLORS_EX), QueueNames.RED_COLORS_KEY, 50000, 2),
+	PING(new Queue(QueueNames.PING), 10000, 1),
+	RED_COLORS(new Queue(QueueNames.RED_COLORS), new TopicExchange(QueueNames.COLORS_EX), QueueNames.RED_COLORS_KEY, 10000, 2, 2),
 
 	;
 
@@ -21,32 +21,35 @@ public enum QueueEnum implements com.mageddo.queue.Queue {
 	private Exchange exchange;
 	private String routingKey;
 	private int ttl;
+	private int retries;
 	private int consumers;
 
-
-	QueueEnum(Queue queue, Exchange exchange, String routingKey, int ttl, int consumers) {
-		set(queue, exchange, routingKey, ttl, consumers);
+	QueueEnum(Queue queue, int ttl, int retries) {
+		this.dlq = new SimpleDLQueue(queue.getName());
+		set(queue, new DirectExchange(queue.getName() + "Exchange"), "", ttl, retries, 1);
 	}
 
-	private void set(Queue queue, Exchange exchange, String routingKey, int ttl, int consumers) {
+	QueueEnum(Queue queue, Exchange exchange, String routingKey, int ttl, int retries, int consumers) {
+		set(queue, exchange, routingKey, ttl, retries, consumers);
+	}
+
+	private void set(Queue queue, Exchange exchange, String routingKey, int ttl, int retries, int consumers) {
 
 		this.exchange = exchange;
 		this.routingKey = routingKey;
 		this.ttl = ttl;
+		this.retries = retries;
 		this.consumers = consumers;
 		this.dlq = new SimpleDLQueue(queue.getName());
 
 		// when all queueEnum retry fails move to this exchange
 		final Map<String, Object> arguments = new HashMap<>();
 		arguments.put("x-dead-letter-exchange", getDlq().getExchange().getName());
-		arguments.put("x-message-ttl", getTTL()); // time to wait for move to DLQ
+//		arguments.put("x-message-ttl", getTTL()); // time to wait for move to DLQ
 		this.queue = new Queue(queue.getName(), queue.isDurable(), queue.isExclusive(), queue.isAutoDelete(), arguments);
 	}
 
-	QueueEnum(Queue queue, int ttl) {
-		this.dlq = new SimpleDLQueue(queue.getName());
-		set(queue, new DirectExchange(queue.getName() + "Exchange"), "", ttl, 1);
-	}
+
 
 	public DLQueue getDlq() {
 		return dlq;
@@ -58,6 +61,11 @@ public enum QueueEnum implements com.mageddo.queue.Queue {
 
 	public Exchange getExchange() {
 		return exchange;
+	}
+
+	@Override
+	public int getRetries() {
+		return retries;
 	}
 
 	public String getRoutingKey() {
@@ -107,6 +115,11 @@ public enum QueueEnum implements com.mageddo.queue.Queue {
 		@Override
 		public int getConsumers() {
 			return 1;
+		}
+
+		@Override
+		public int getRetries() {
+			return 0;
 		}
 
 	}
