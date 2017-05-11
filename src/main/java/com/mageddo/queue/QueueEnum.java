@@ -44,7 +44,7 @@ public enum QueueEnum implements com.mageddo.queue.Queue {
 
 		// when all queueEnum retry fails move to this exchange
 		final Map<String, Object> arguments = new HashMap<>();
-		arguments.put("x-dead-letter-exchange", getDlq().getExchange().getName());
+//		arguments.put("x-dead-letter-exchange", getDlq().getExchange().getName());
 //		arguments.put("x-message-ttl", getTTL()); // time to wait for move to DLQ
 		this.queue = new Queue(queue.getName(), queue.isDurable(), queue.isExclusive(), queue.isAutoDelete(), arguments);
 	}

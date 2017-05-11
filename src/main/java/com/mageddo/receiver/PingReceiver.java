@@ -24,11 +24,15 @@ public class PingReceiver implements Consumer<String> {
   private RabbitTemplate outgoingSender;
 
   // Scheduled task to send an object every 5 seconds
-  @Scheduled(fixedDelay = 1100)
-  public void sender() {
-    Date d = new Date();
-    LOGGER.info("Sending example object at " + d);
-    outgoingSender.convertAndSend(QueueEnum.PING.getExchange().getName(), "", new SimpleDateFormat("HH:mm:ss").format(d));
+  @Scheduled(fixedDelay = 100)
+  public void pingSender() {
+    try{
+      Date d = new Date();
+      LOGGER.info("status=send, date={}", d);
+      outgoingSender.convertAndSend(QueueEnum.PING.getExchange().getName(), "", new SimpleDateFormat("HH:mm:ss").format(d));
+    }catch (Exception e){
+      LOGGER.error("status=error");
+    }
   }
 
   // Annotation to listen for an ExampleObject
@@ -36,11 +40,11 @@ public class PingReceiver implements Consumer<String> {
   public void consume(String date) {
 
 
-//    try {
-//      Thread.sleep(new Random().nextInt( (int) (QueueEnum.PING.getTTL()) ));
-//    } catch (InterruptedException e) {
-//      throw new RuntimeException(e);
-//    }
+    try {
+      Thread.sleep(new Random().nextInt( 1000));
+    } catch (InterruptedException e) {
+      throw new RuntimeException(e);
+    }
 
     if(new Random().nextInt(5) == 3){
       LOGGER.info("time={}, status=success", date);
