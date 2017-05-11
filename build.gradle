@@ -1,10 +1,10 @@
 buildscript {
-    repositories {
-        mavenCentral()
-    }
-    dependencies {
-        classpath("org.springframework.boot:spring-boot-gradle-plugin:1.4.1.RELEASE")
-    }
+	repositories {
+		mavenCentral()
+	}
+	dependencies {
+		classpath("org.springframework.boot:spring-boot-gradle-plugin:1.4.1.RELEASE")
+	}
 }
 
 apply plugin: 'java'
@@ -13,19 +13,19 @@ apply plugin: 'idea'
 apply plugin: 'spring-boot'
 
 jar {
-    baseName = 'gs-messaging-rabbitmq'
-    version =  '0.1.0'
+	baseName = 'gs-messaging-rabbitmq'
+	version = '0.1.0'
 }
 
 repositories {
-    mavenCentral()
+	mavenCentral()
 }
 
 sourceCompatibility = 1.8
 targetCompatibility = 1.8
 
 dependencies {
-    compile("org.springframework.boot:spring-boot-starter-amqp")
-    testCompile("org.springframework.boot:spring-boot-starter-test")
+	compile group: 'org.springframework.boot', name: 'spring-boot-starter-amqp', version: '1.5.3.RELEASE'
+	testCompile("org.springframework.boot:spring-boot-starter-test")
 }
 

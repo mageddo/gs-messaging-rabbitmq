@@ -4,18 +4,19 @@ package com.mageddo;
 import com.mageddo.queue.*;
 import com.mageddo.receiver.ColorReceiver;
 import com.mageddo.receiver.PingReceiver;
-import com.mageddo.utils.QueueUtils;
 import org.aopalliance.aop.Advice;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.amqp.core.Binding;
 import org.springframework.amqp.core.BindingBuilder;
+import org.springframework.amqp.rabbit.config.RetryInterceptorBuilder;
 import org.springframework.amqp.rabbit.connection.ConnectionFactory;
 import org.springframework.amqp.rabbit.core.RabbitAdmin;
 import org.springframework.amqp.rabbit.core.RabbitTemplate;
 import org.springframework.amqp.rabbit.listener.SimpleMessageListenerContainer;
 import org.springframework.amqp.rabbit.listener.adapter.MessageListenerAdapter;
-import org.springframework.amqp.support.converter.MessagingMessageConverter;
+
+import org.springframework.amqp.rabbit.retry.RepublishMessageRecoverer;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.config.ConfigurableBeanFactory;
 import org.springframework.boot.SpringApplication;
@@ -23,9 +24,8 @@ import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Primary;
-import org.springframework.messaging.converter.GenericMessageConverter;
-import org.springframework.retry.interceptor.RetryInterceptorBuilder;
-import org.springframework.retry.interceptor.StatefulRetryOperationsInterceptor;
+
+import org.springframework.retry.interceptor.RetryOperationsInterceptor;
 import org.springframework.scheduling.annotation.EnableScheduling;
 
 import javax.annotation.PostConstruct;
@@ -52,14 +52,17 @@ public class Application {
 	@Autowired
 	RabbitAdmin rabbitAdmin;
 
+	@Autowired
+	RabbitTemplate rabbitTemplate;
+
 
 	@PostConstruct
 	void setupQueue() {
 
 		for (final QueueEnum completeQueue : QueueEnum.values()) {
 
-			declareQueue(completeQueue);
-			declareQueue(completeQueue.getDlq());
+			declareQueue(completeQueue, completeQueue.getDlq());
+			declareQueue(completeQueue.getDlq(), null);
 
 		}
 
@@ -69,11 +72,11 @@ public class Application {
 	/**
 	 * Creates the queueEnum
 	 *
-	 * @param queueEnum
-	 * @param queueEnum
 	 * @param
+	 * @param queueEnum
+	 * @param dlq
 	 */
-	void declareQueue(Queue queueEnum) {
+	void declareQueue(Queue queueEnum, DLQueue dlq) {
 
 //		if (QueueUtils.getQueueSize(rabbitAdmin, queueEnum.getQueue().getName()) > 0) {
 //			LOGGER.error("msg=queueEnum, status=already exists and is not empty, queue={}", queueEnum.getQueue().getName());
@@ -97,12 +100,12 @@ public class Application {
 		beanFactory.registerSingleton(queueEnum.getQueue().getName(), queueEnum.getQueue());
 		beanFactory.registerSingleton(queueEnum.getExchange().getName(), queueEnum.getExchange());
 
-		if (!(queueEnum instanceof DLQueue)){
+		if (!(queueEnum instanceof DLQueue)) {
 
 			Consumer receiver;
-			if(queueEnum.getQueue().getName().equals(QueueNames.PING)){
+			if (queueEnum.getQueue().getName().equals(QueueNames.PING)) {
 				receiver = new PingReceiver();
-			}else{
+			} else {
 				receiver = new ColorReceiver();
 			}
 
@@ -110,15 +113,14 @@ public class Application {
 			container.setQueues(queueEnum.getQueue());
 			container.setConcurrentConsumers(queueEnum.getConsumers());
 
-			final StatefulRetryOperationsInterceptor statefulRetryInterceptorBuilder = RetryInterceptorBuilder
-				.stateful()
-//				.retryPolicy()
-				.maxAttempts(queueEnum.getRetries())
+			final RetryOperationsInterceptor interceptorBuilder = RetryInterceptorBuilder
+				.stateless()
 				.backOffOptions(queueEnum.getTTL(), 2, queueEnum.getTTL())
+				.maxAttempts(queueEnum.getRetries())
+				.recoverer(new RepublishMessageRecoverer(rabbitTemplate, dlq.getExchange().getName(), dlq.getRoutingKey()))
 				.build();
 
-			container.setAdviceChain(new Advice[]{statefulRetryInterceptorBuilder});
-
+			container.setAdviceChain(new Advice[]{interceptorBuilder});
 			container.start();
 
 			final MessageListenerAdapter listenerAdapter = new MessageListenerAdapter(receiver);
@@ -127,6 +129,7 @@ public class Application {
 			beanFactory.registerSingleton(queueEnum.getQueue().getName() + "Container", container);
 
 		}
+
 
 
 	}

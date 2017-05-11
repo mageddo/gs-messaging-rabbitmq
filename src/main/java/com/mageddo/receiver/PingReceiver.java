@@ -36,13 +36,13 @@ public class PingReceiver implements Consumer<String> {
   public void consume(String date) {
 
 
-    try {
-      Thread.sleep(new Random().nextInt( (int) (QueueEnum.PING.getTTL()) ));
-    } catch (InterruptedException e) {
-      throw new RuntimeException(e);
-    }
+//    try {
+//      Thread.sleep(new Random().nextInt( (int) (QueueEnum.PING.getTTL()) ));
+//    } catch (InterruptedException e) {
+//      throw new RuntimeException(e);
+//    }
 
-    if(new Random().nextBoolean()){
+    if(new Random().nextInt(5) == 3){
       LOGGER.info("time={}, status=success", date);
     }else {
       LOGGER.error("time={}, status=err", date);
