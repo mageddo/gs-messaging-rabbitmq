@@ -18,41 +18,41 @@ import org.springframework.stereotype.Component;
 @Component
 public class PingReceiver implements Consumer<String> {
 
-  private static final Logger LOGGER = LoggerFactory.getLogger(PingReceiver.class);
+	private static final Logger LOGGER = LoggerFactory.getLogger(PingReceiver.class);
 
-  @Autowired
-  private RabbitTemplate outgoingSender;
+	@Autowired
+	private RabbitTemplate outgoingSender;
 
-  // Scheduled task to send an object every 5 seconds
-  @Scheduled(fixedDelay = 100)
-  public void pingSender() {
-    try{
-      Date d = new Date();
-      LOGGER.info("status=send, date={}", d);
-      outgoingSender.convertAndSend(QueueEnum.PING.getExchange().getName(), "", new SimpleDateFormat("HH:mm:ss").format(d));
-    }catch (Exception e){
-      LOGGER.error("status=error");
-    }
-  }
+	// Scheduled task to send an object every 5 seconds
+	@Scheduled(fixedDelay = 100)
+	public void pingSender() {
+		try {
+			Date d = new Date();
+			LOGGER.info("status=send, date={}", d);
+			outgoingSender.convertAndSend(QueueEnum.PING.getExchange().getName(), new SimpleDateFormat("HH:mm:ss").format(d));
+		} catch (Exception e) {
+			LOGGER.error("status=error");
+		}
+	}
 
-  // Annotation to listen for an ExampleObject
-//  @RabbitListener(queues = QueueNames.PING)
-  public void consume(String date) {
+	// Annotation to listen for an ExampleObject
+	@RabbitListener(queues = QueueNames.PING, containerFactory = QueueNames.PING + "Container")
+	public void consume(String date) {
 
 
-    try {
-      Thread.sleep(new Random().nextInt( 1000));
-    } catch (InterruptedException e) {
-      throw new RuntimeException(e);
-    }
+		try {
+			Thread.sleep(new Random().nextInt(1000));
+		} catch (InterruptedException e) {
+			throw new RuntimeException(e);
+		}
 
-    if(new Random().nextInt(5) == 3){
-      LOGGER.info("time={}, status=success", date);
-    }else {
-      LOGGER.error("time={}, status=err", date);
-      throw new RuntimeException("Failed");
-    }
+		if (new Random().nextInt(5) == 3) {
+			LOGGER.info("time={}, status=success", date);
+		} else {
+			LOGGER.error("time={}, status=err", date);
+			throw new RuntimeException("Failed");
+		}
 
-  }
+	}
 
 }

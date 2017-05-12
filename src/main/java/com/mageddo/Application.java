@@ -10,6 +10,7 @@ import org.slf4j.LoggerFactory;
 import org.springframework.amqp.core.Binding;
 import org.springframework.amqp.core.BindingBuilder;
 import org.springframework.amqp.rabbit.config.RetryInterceptorBuilder;
+import org.springframework.amqp.rabbit.config.SimpleRabbitListenerContainerFactory;
 import org.springframework.amqp.rabbit.connection.ConnectionFactory;
 import org.springframework.amqp.rabbit.core.RabbitAdmin;
 import org.springframework.amqp.rabbit.core.RabbitTemplate;
@@ -102,16 +103,9 @@ public class Application {
 
 		if (!(queueEnum instanceof DLQueue)) {
 
-			Consumer receiver;
-			if (queueEnum.getQueue().getName().equals(QueueNames.PING)) {
-				receiver = new PingReceiver();
-			} else {
-				receiver = new ColorReceiver();
-			}
-
-			final SimpleMessageListenerContainer container = new SimpleMessageListenerContainer(connectionFactory);
-			container.setQueues(queueEnum.getQueue());
-			container.setConcurrentConsumers(queueEnum.getConsumers());
+			final SimpleRabbitListenerContainerFactory containerFactory = new SimpleRabbitListenerContainerFactory();
+			containerFactory.setConnectionFactory(connectionFactory);
+			containerFactory.setConcurrentConsumers(queueEnum.getConsumers());
 
 			final RetryOperationsInterceptor interceptorBuilder = RetryInterceptorBuilder
 				.stateless()
@@ -120,17 +114,11 @@ public class Application {
 				.recoverer(new RepublishMessageRecoverer(rabbitTemplate, dlq.getExchange().getName(), dlq.getRoutingKey()))
 				.build();
 
-			container.setAdviceChain(new Advice[]{interceptorBuilder});
-			container.start();
+			containerFactory.setAdviceChain(interceptorBuilder);
 
-			final MessageListenerAdapter listenerAdapter = new MessageListenerAdapter(receiver);
-			listenerAdapter.setDefaultListenerMethod("consume");
-			container.setMessageListener(listenerAdapter);
-			beanFactory.registerSingleton(queueEnum.getQueue().getName() + "Container", container);
+			beanFactory.registerSingleton(queueEnum.getQueue().getName() + "Container", containerFactory);
 
 		}
-
-
 
 	}
 
