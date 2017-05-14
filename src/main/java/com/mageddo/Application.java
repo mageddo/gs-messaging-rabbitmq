@@ -11,6 +11,7 @@ import org.springframework.amqp.core.Binding;
 import org.springframework.amqp.core.BindingBuilder;
 import org.springframework.amqp.rabbit.config.RetryInterceptorBuilder;
 import org.springframework.amqp.rabbit.config.SimpleRabbitListenerContainerFactory;
+import org.springframework.amqp.rabbit.connection.CachingConnectionFactory;
 import org.springframework.amqp.rabbit.connection.ConnectionFactory;
 import org.springframework.amqp.rabbit.core.RabbitAdmin;
 import org.springframework.amqp.rabbit.core.RabbitTemplate;
@@ -48,7 +49,7 @@ public class Application {
 	ConfigurableBeanFactory beanFactory;
 
 	@Autowired
-	ConnectionFactory connectionFactory;
+	CachingConnectionFactory connectionFactory;
 
 	@Autowired
 	RabbitAdmin rabbitAdmin;
@@ -59,7 +60,6 @@ public class Application {
 
 	@PostConstruct
 	void setupQueue() {
-
 		for (final QueueEnum completeQueue : QueueEnum.values()) {
 
 			declareQueue(completeQueue, completeQueue.getDlq());
@@ -79,14 +79,6 @@ public class Application {
 	 */
 	void declareQueue(Queue queueEnum, DLQueue dlq) {
 
-//		if (QueueUtils.getQueueSize(rabbitAdmin, queueEnum.getQueue().getName()) > 0) {
-//			LOGGER.error("msg=queueEnum, status=already exists and is not empty, queue={}", queueEnum.getQueue().getName());
-//			// MOVER para uma fila temporaria e depois trazer devolta
-//			return;
-//		} else {
-//			rabbitAdmin.deleteQueue(queueEnum.getQueue().getName());
-//		}
-
 		final Binding binding = BindingBuilder.bind(queueEnum.getQueue())
 			.to(queueEnum.getExchange())
 			.with(queueEnum.getRoutingKey())
@@ -97,7 +89,6 @@ public class Application {
 		rabbitAdmin.declareExchange(queueEnum.getExchange());
 		rabbitAdmin.declareBinding(binding);
 
-
 		beanFactory.registerSingleton(queueEnum.getQueue().getName(), queueEnum.getQueue());
 		beanFactory.registerSingleton(queueEnum.getExchange().getName(), queueEnum.getExchange());
 
@@ -106,6 +97,8 @@ public class Application {
 			final SimpleRabbitListenerContainerFactory containerFactory = new SimpleRabbitListenerContainerFactory();
 			containerFactory.setConnectionFactory(connectionFactory);
 			containerFactory.setConcurrentConsumers(queueEnum.getConsumers());
+			containerFactory.setMaxConcurrentConsumers(queueEnum.getMaxConsumers());
+
 
 			final RetryOperationsInterceptor interceptorBuilder = RetryInterceptorBuilder
 				.stateless()

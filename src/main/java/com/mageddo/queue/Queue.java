@@ -17,5 +17,7 @@ public interface Queue {
 
 	int getConsumers();
 
+	int getMaxConsumers();
+
 	int getRetries();
 }

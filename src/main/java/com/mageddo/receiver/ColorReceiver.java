@@ -23,7 +23,7 @@ public class ColorReceiver implements Consumer<byte[]> {
 	RabbitTemplate rabbitTemplate;
 
 
-	@Scheduled(fixedDelay = 500)
+//	@Scheduled(fixedDelay = 500)
 	public void colorSender() {
 		Date d = new Date();
 		String[] keys = {QueueNames.RED_COLORS_KEY, QueueNames.BLUE_COLORS_KEY, QueueNames.ORANGE_COLORS_KEY};

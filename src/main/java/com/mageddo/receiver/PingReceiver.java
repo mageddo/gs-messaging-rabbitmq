@@ -24,7 +24,7 @@ public class PingReceiver implements Consumer<String> {
 	private RabbitTemplate outgoingSender;
 
 	// Scheduled task to send an object every 5 seconds
-	@Scheduled(fixedDelay = 100)
+//	@Scheduled(fixedDelay = 100)
 	public void pingSender() {
 		try {
 			Date d = new Date();

@@ -11,8 +11,9 @@ import java.util.Map;
  */
 public enum QueueEnum implements com.mageddo.queue.Queue {
 
+	MAIL(new Queue(QueueNames.MAIL), new TopicExchange(QueueNames.MAIL + "Exchange"), "", 2000, 2, 5, 5),
 	PING(new Queue(QueueNames.PING), 10000, 2),
-	RED_COLORS(new Queue(QueueNames.RED_COLORS), new TopicExchange(QueueNames.COLORS_EX), QueueNames.RED_COLORS_KEY, 10000, 2, 2),
+	RED_COLORS(new Queue(QueueNames.RED_COLORS), new TopicExchange(QueueNames.COLORS_EX), QueueNames.RED_COLORS_KEY, 10000, 2, 1, 2),
 
 	;
 
@@ -23,30 +24,27 @@ public enum QueueEnum implements com.mageddo.queue.Queue {
 	private int ttl;
 	private int retries;
 	private int consumers;
+	private int maxConsumers;
 
 	QueueEnum(Queue queue, int ttl, int retries) {
 		this.dlq = new SimpleDLQueue(queue.getName());
-		set(queue, new DirectExchange(queue.getName() + "Exchange"), "", ttl, retries, 1);
+		set(queue, new DirectExchange(queue.getName() + "Exchange"), "", ttl, retries, 1, 1);
 	}
 
-	QueueEnum(Queue queue, Exchange exchange, String routingKey, int ttl, int retries, int consumers) {
-		set(queue, exchange, routingKey, ttl, retries, consumers);
+	QueueEnum(Queue queue, Exchange exchange, String routingKey, int ttl, int retries, int consumers, int maxConsumers) {
+		set(queue, exchange, routingKey, ttl, retries, consumers, maxConsumers);
 	}
 
-	private void set(Queue queue, Exchange exchange, String routingKey, int ttl, int retries, int consumers) {
+	private void set(Queue queue, Exchange exchange, String routingKey, int ttl, int retries, int consumers, int maxConsumers) {
 
 		this.exchange = exchange;
 		this.routingKey = routingKey;
 		this.ttl = ttl;
 		this.retries = retries;
 		this.consumers = consumers;
+		this.maxConsumers = maxConsumers;
 		this.dlq = new SimpleDLQueue(queue.getName());
-
-		// when all queueEnum retry fails move to this exchange
-		final Map<String, Object> arguments = new HashMap<>();
-//		arguments.put("x-dead-letter-exchange", getDlq().getExchange().getName());
-//		arguments.put("x-message-ttl", getTTL()); // time to wait for move to DLQ
-		this.queue = new Queue(queue.getName(), queue.isDurable(), queue.isExclusive(), queue.isAutoDelete(), arguments);
+		this.queue = queue;
 	}
 
 
@@ -78,6 +76,11 @@ public enum QueueEnum implements com.mageddo.queue.Queue {
 
 	public int getConsumers() {
 		return consumers;
+	}
+
+	@Override
+	public int getMaxConsumers() {
+		return maxConsumers;
 	}
 
 	class SimpleDLQueue implements DLQueue {
@@ -114,6 +117,11 @@ public enum QueueEnum implements com.mageddo.queue.Queue {
 
 		@Override
 		public int getConsumers() {
+			return 1;
+		}
+
+		@Override
+		public int getMaxConsumers() {
 			return 1;
 		}
 
