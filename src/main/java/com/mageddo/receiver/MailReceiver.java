@@ -9,6 +9,7 @@ import org.springframework.amqp.rabbit.core.RabbitTemplate;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
+import org.springframework.util.StopWatch;
 
 import java.util.concurrent.atomic.AtomicInteger;
 
@@ -21,22 +22,26 @@ public class MailReceiver {
 	private static final Logger LOGGER = LoggerFactory.getLogger(MailReceiver.class);
 
 	@Autowired
-	private RabbitTemplate jmsTemplate;
+	private RabbitTemplate rabbitTemplate;
 
 	private int id = 0;
 	private AtomicInteger counter = new AtomicInteger(0);
 
 	@Scheduled(fixedDelay = Integer.MAX_VALUE)
 	public void postMail() {
-		for(;;)
-			jmsTemplate.convertAndSend(QueueEnum.MAIL.getExchange().getName(), "", String.format("Hello %04d", ++id));
+		for(;;){
+			final StopWatch stopWatch = new StopWatch();
+			stopWatch.start();
+			rabbitTemplate.convertAndSend(QueueEnum.MAIL.getExchange().getName(), "", String.format("Hello %04d", ++id));
+			LOGGER.info("status=success, time={}", stopWatch.getTotalTimeMillis());
+		}
 	}
 
 	@RabbitListener(queues = QueueNames.MAIL, containerFactory = QueueNames.MAIL + "Container")
 	public void consume(String email) throws InterruptedException {
 
 //		if (new Random().nextInt(30) == 3) {
-		LOGGER.info("status=mail-received, status=begin, mail={}", email);
+//		LOGGER.info("status=mail-received, status=begin, mail={}", email);
 		boolean error = false;
 		if (!error) {
 			Thread.sleep(50);
