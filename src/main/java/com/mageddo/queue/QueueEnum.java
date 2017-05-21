@@ -11,7 +11,7 @@ import java.util.Map;
  */
 public enum QueueEnum implements com.mageddo.queue.Queue {
 
-	MAIL(new Queue(QueueNames.MAIL), new TopicExchange(QueueNames.MAIL + "Exchange"), "", 2000, 2, 5, 5),
+	MAIL(new Queue(QueueNames.MAIL), new TopicExchange(QueueNames.MAIL + "Exchange"), "", 2000, 2, 10, 10),
 	PING(new Queue(QueueNames.PING), 10000, 2),
 	RED_COLORS(new Queue(QueueNames.RED_COLORS), new TopicExchange(QueueNames.COLORS_EX), QueueNames.RED_COLORS_KEY, 10000, 2, 1, 2),
 

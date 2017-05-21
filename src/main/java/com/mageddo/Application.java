@@ -1,10 +1,9 @@
 
 package com.mageddo;
 
-import com.mageddo.queue.*;
-import com.mageddo.receiver.ColorReceiver;
-import com.mageddo.receiver.PingReceiver;
-import org.aopalliance.aop.Advice;
+import com.mageddo.queue.DLQueue;
+import com.mageddo.queue.Queue;
+import com.mageddo.queue.QueueEnum;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.amqp.core.Binding;
@@ -12,12 +11,8 @@ import org.springframework.amqp.core.BindingBuilder;
 import org.springframework.amqp.rabbit.config.RetryInterceptorBuilder;
 import org.springframework.amqp.rabbit.config.SimpleRabbitListenerContainerFactory;
 import org.springframework.amqp.rabbit.connection.CachingConnectionFactory;
-import org.springframework.amqp.rabbit.connection.ConnectionFactory;
 import org.springframework.amqp.rabbit.core.RabbitAdmin;
 import org.springframework.amqp.rabbit.core.RabbitTemplate;
-import org.springframework.amqp.rabbit.listener.SimpleMessageListenerContainer;
-import org.springframework.amqp.rabbit.listener.adapter.MessageListenerAdapter;
-
 import org.springframework.amqp.rabbit.retry.RepublishMessageRecoverer;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.config.ConfigurableBeanFactory;
@@ -26,11 +21,12 @@ import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Primary;
-
 import org.springframework.retry.interceptor.RetryOperationsInterceptor;
 import org.springframework.scheduling.annotation.EnableScheduling;
 
 import javax.annotation.PostConstruct;
+import java.io.IOException;
+import java.util.concurrent.TimeoutException;
 
 /**
  * https://github.com/mageddo/gs-messaging-rabbitmq/blob/master/src/main/java/com/mageddo/Application.java
@@ -60,6 +56,7 @@ public class Application {
 
 	@PostConstruct
 	void setupQueue() {
+
 		for (final QueueEnum completeQueue : QueueEnum.values()) {
 
 			declareQueue(completeQueue, completeQueue.getDlq());
@@ -117,21 +114,20 @@ public class Application {
 
 	@Bean
 	@Primary
-	public RabbitTemplate rabbitTemplate(){
-		final RabbitTemplate rabbitTemplate = new RabbitTemplate(connectionFactory);
-		rabbitTemplate.setChannelTransacted(true);
-		return rabbitTemplate;
+	public RabbitTemplate rabbitTemplate(RabbitAdmin rabbitAdmin){
+		return rabbitAdmin.getRabbitTemplate();
 	}
 
 
 	@Bean
 	public RabbitAdmin getRabbitAdmin() {
 		final RabbitAdmin rabbitAdmin = new RabbitAdmin(connectionFactory);
-		rabbitAdmin.getRabbitTemplate().setChannelTransacted(true);
+		final RabbitTemplate rabbitTemplate = rabbitAdmin.getRabbitTemplate();
+		rabbitTemplate.setChannelTransacted(true);
 		return rabbitAdmin;
 	}
 
-	public static void main(String[] args) throws InterruptedException {
+	public static void main(String[] args) throws InterruptedException, IOException, TimeoutException {
 		SpringApplication.run(Application.class, args);
 	}
 
