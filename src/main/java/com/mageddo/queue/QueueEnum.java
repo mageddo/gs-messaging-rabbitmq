@@ -1,10 +1,9 @@
 package com.mageddo.queue;
 
-import org.springframework.amqp.core.*;
+import org.springframework.amqp.core.DirectExchange;
+import org.springframework.amqp.core.Exchange;
 import org.springframework.amqp.core.Queue;
-
-import java.util.HashMap;
-import java.util.Map;
+import org.springframework.amqp.core.TopicExchange;
 
 /**
  * Created by elvis on 07/10/16.
@@ -14,6 +13,7 @@ public enum QueueEnum implements com.mageddo.queue.Queue {
 	MAIL(new Queue(QueueNames.MAIL), new TopicExchange(QueueNames.MAIL + "Exchange"), "", 2000, 2, 10, 10),
 	PING(new Queue(QueueNames.PING), 10000, 2),
 	RED_COLORS(new Queue(QueueNames.RED_COLORS), new TopicExchange(QueueNames.COLORS_EX), QueueNames.RED_COLORS_KEY, 10000, 2, 1, 2),
+	CALL(new Queue(QueueNames.CALL), new TopicExchange(QueueNames.CALL + "Exchange"), "", 10000, 2, 1, 2),
 
 	;
 

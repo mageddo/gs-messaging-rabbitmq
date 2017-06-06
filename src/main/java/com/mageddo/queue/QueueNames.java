@@ -1,8 +1,5 @@
 package com.mageddo.queue;
 
-import org.springframework.amqp.core.*;
-import org.springframework.amqp.core.Queue;
-
 /**
  * Created by elvis on 07/10/16.
  */
@@ -15,6 +12,7 @@ public class QueueNames {
 	public static final String ORANGE_COLORS_KEY = "orange";
 	public static final String COLORS_EX = "ColorsTopicExchange";
 	public static final String MAIL = "Mail";
+	public static final String CALL = "Call";
 
 	private QueueNames() {
 	}

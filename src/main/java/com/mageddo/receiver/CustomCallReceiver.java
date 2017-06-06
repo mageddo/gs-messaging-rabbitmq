@@ -6,11 +6,11 @@ import java.util.concurrent.atomic.AtomicInteger;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.mageddo.queue.QueueEnum;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.amqp.core.Binding;
 import org.springframework.amqp.core.BindingBuilder;
-import org.springframework.amqp.core.DirectExchange;
 import org.springframework.amqp.core.Exchange;
 import org.springframework.amqp.core.Message;
 import org.springframework.amqp.core.MessageListener;
@@ -92,17 +92,17 @@ public class CustomCallReceiver implements MessageListener {
 
     @Bean
     public Binding queueBinding(){
-        return BindingBuilder.bind(getCallQueue()).to(getCallExchange()).with("");
+        return BindingBuilder.bind(getCallQueue()).to(getCallExchange()).with("").noargs();
     }
 
     @Bean
     public Queue getCallQueue() {
-        return new Queue("callQueue", true);
+        return QueueEnum.CALL.getQueue();
     }
 
     @Bean
-    public DirectExchange getCallExchange() {
-        return new DirectExchange("callExchange");
+    public Exchange getCallExchange() {
+        return QueueEnum.CALL.getExchange();
     }
 
     static class CallVO {
