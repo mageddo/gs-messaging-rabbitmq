@@ -1,5 +1,7 @@
 package com.mageddo.receiver;
 
+import java.util.concurrent.atomic.AtomicInteger;
+
 import com.mageddo.queue.QueueEnum;
 import com.mageddo.queue.QueueNames;
 import org.slf4j.Logger;
@@ -7,11 +9,8 @@ import org.slf4j.LoggerFactory;
 import org.springframework.amqp.rabbit.annotation.RabbitListener;
 import org.springframework.amqp.rabbit.core.RabbitTemplate;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 import org.springframework.util.StopWatch;
-
-import java.util.concurrent.atomic.AtomicInteger;
 
 /**
  * Created by elvis on 13/05/17.
@@ -27,7 +26,7 @@ public class MailReceiver {
 	private int id = 0;
 	private AtomicInteger counter = new AtomicInteger(0);
 
-	@Scheduled(fixedDelay = Integer.MAX_VALUE)
+//	@Scheduled(fixedDelay = Integer.MAX_VALUE)
 	public void postMail() {
 		for(;;){
 			final StopWatch stopWatch = new StopWatch();
